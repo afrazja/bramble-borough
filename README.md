@@ -32,6 +32,8 @@ Close the Unity editor for this project before invoking batch builds. In PowerSh
 
 Logs go to `Builds/Logs`. Build output is intentionally ignored by Git. The Android APK uses Unity's local debug signing for testing; it is not a store-ready release. Never commit signing keys or passwords.
 
+The build script detects the isolated Android dependencies prepared in this task's sibling `work` folder. On another machine, install Unity's Android SDK/NDK components through Hub, or pass `-AndroidSdk` and `-AndroidNdk` paths. SDK/NDK overrides apply only during the build and restore the prior editor preferences afterwards.
+
 For Web testing, serve `Builds/Web` over HTTP rather than opening `index.html` as a file. Web compression is disabled to avoid custom server-header requirements on GitHub Pages.
 
 ## Git and Pages

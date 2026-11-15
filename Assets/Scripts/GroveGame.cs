@@ -86,7 +86,7 @@ namespace BrambleBorough
 
     public sealed class GroveGame : MonoBehaviour
     {
-        public GroveState State = new GroveState();
+        [NonSerialized] public GroveState State = new GroveState();
         Texture2D circle;
         GUIStyle label, button;
         int selected = 1;
@@ -112,8 +112,10 @@ namespace BrambleBorough
         void Line(Vector2 a,Vector2 b,float width,Color c)
         {
             Matrix4x4 old=GUI.matrix;
-            GUIUtility.RotateAroundPivot(Mathf.Atan2(b.y-a.y,b.x-a.x)*Mathf.Rad2Deg,a);
-            Box(new Rect(a.x,a.y-width/2,Vector2.Distance(a,b),width),c); GUI.matrix=old;
+            // Compose in logical canvas space; RotateAroundPivot uses screen-space pivots
+            // and shifts vertical paths when the Web canvas is scaled or letterboxed.
+            GUI.matrix=old*Matrix4x4.TRS(new Vector3(a.x,a.y,0),Quaternion.Euler(0,0,Mathf.Atan2(b.y-a.y,b.x-a.x)*Mathf.Rad2Deg),Vector3.one);
+            Box(new Rect(0,-width/2,Vector2.Distance(a,b),width),c); GUI.matrix=old;
             Oval(a.x,a.y,width,width,c); Oval(b.x,b.y,width,width,c);
         }
         void Face(float x,float y,float size,Color color,bool heavy=false)

@@ -86,18 +86,20 @@ public static class ProjectBuild
         // Optional overrides are scoped to this build; restore shared editor preferences afterwards.
         string sdk=UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath;
         string ndk=UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath;
+        bool sdkChanged=false, ndkChanged=false;
         try
         {
             string customSdk=Environment.GetEnvironmentVariable("BRAMBLE_ANDROID_SDK");
             string customNdk=Environment.GetEnvironmentVariable("BRAMBLE_ANDROID_NDK");
-            if(!string.IsNullOrEmpty(customSdk)) UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath=customSdk;
-            if(!string.IsNullOrEmpty(customNdk)) UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath=customNdk;
+            if(!string.IsNullOrEmpty(customSdk)) { UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath=customSdk; sdkChanged=true; }
+            if(!string.IsNullOrEmpty(customNdk)) { UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath=customNdk; ndkChanged=true; }
+            PlayerSettings.Android.targetSdkVersion=(AndroidSdkVersions)36;
             Build(BuildTarget.Android,"Builds/Android/BrambleBorough.apk");
         }
         finally
         {
-            UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath=sdk;
-            UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath=ndk;
+            if(sdkChanged) UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath=Directory.Exists(Path.Combine(sdk,"cmdline-tools"))?sdk:string.Empty;
+            if(ndkChanged) UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath=Directory.Exists(Path.Combine(ndk,"toolchains"))?ndk:string.Empty;
         }
     }
     static void Build(BuildTarget target,string path)
