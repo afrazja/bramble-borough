@@ -49,6 +49,13 @@ public static class ProjectBuild
         Require(!g.Place(0,2) && g.Coins == 120, "occupied pad cannot charge coins");
         Require(g.Place(1,2) && !g.Place(2,1), "insufficient funds rejected");
         Require(g.StartWave() && !g.StartWave(), "wave cannot start twice");
+        var frost = new GroveState(); frost.Place(0,2); frost.StartWave();
+        var slowed = new GroveState.Enemy { Position=frost.Pads[0], HP=50, MaxHP=50, Speed=60 };
+        frost.Enemies.Add(slowed); frost.Tick(.01f);
+        Require(slowed.Slow>0 && slowed.HP==39, "dew keeper applies damage and slowing");
+        var idle = new GroveState();
+        idle.Shots.Add(new GroveState.Shot()); idle.Tick(1);
+        Require(idle.Shots.Count==0, "shot effects expire between waves");
         var loss = new GroveState();
         for(int wave=0;wave<3 && !loss.Lost;wave++) { loss.StartWave(); for(int t=0;t<12000 && loss.Running;t++) loss.Tick(.05f); }
         Require(loss.Lost && loss.Health==0 && !loss.StartWave() && !loss.Place(0,1), "undefended grove loses and locks gameplay");
@@ -68,15 +75,34 @@ public static class ProjectBuild
         float frozen = win.Enemies.Count; win.Tick(10); Require(win.Enemies.Count == frozen, "terminal state stable");
         var reset = new GroveState(); Require(reset.Coins==180 && reset.Health==10 && reset.Wave==0 && reset.Enemies.Count==0, "fresh game resets state");
         Directory.CreateDirectory("Builds");
-        File.WriteAllText("Builds/gameplay-checks.txt", "PASS: placement, funds, occupied pads, wave gating, loss, viable three-wave victory, terminal state, fresh reset.\nVictory lives: "+win.Health+"; kills: "+win.Kills);
+        File.WriteAllText("Builds/gameplay-checks.txt", "PASS: placement, funds, occupied pads, wave gating, slowing, effect cleanup, loss, viable three-wave victory, terminal state, fresh reset.\nVictory lives: "+win.Health+"; kills: "+win.Kills);
         Debug.Log("BRAMBLE GAMEPLAY CHECKS PASSED: victory lives="+win.Health+", kills="+win.Kills);
     }
     public static void SetupAndVerify() { Prepare(); Verify(); }
     public static void Windows() { Build(BuildTarget.StandaloneWindows64,"Builds/Windows/BrambleBorough.exe"); }
     public static void Web() { Build(BuildTarget.WebGL,"Builds/Web"); }
-    public static void Android() { Build(BuildTarget.Android,"Builds/Android/BrambleBorough.apk"); }
+    public static void Android()
+    {
+        // Optional overrides are scoped to this build; restore shared editor preferences afterwards.
+        string sdk=UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath;
+        string ndk=UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath;
+        try
+        {
+            string customSdk=Environment.GetEnvironmentVariable("BRAMBLE_ANDROID_SDK");
+            string customNdk=Environment.GetEnvironmentVariable("BRAMBLE_ANDROID_NDK");
+            if(!string.IsNullOrEmpty(customSdk)) UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath=customSdk;
+            if(!string.IsNullOrEmpty(customNdk)) UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath=customNdk;
+            Build(BuildTarget.Android,"Builds/Android/BrambleBorough.apk");
+        }
+        finally
+        {
+            UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath=sdk;
+            UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath=ndk;
+        }
+    }
     static void Build(BuildTarget target,string path)
     {
+        Verify();
         var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes=new[]{Scene}, locationPathName=path, target=target, options=BuildOptions.None });
         if(report.summary.result!=BuildResult.Succeeded) throw new Exception("Build failed: "+report.summary.result);
         Debug.Log("BRAMBLE BUILD PASSED: "+path);
